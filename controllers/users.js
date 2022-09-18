@@ -15,12 +15,17 @@ exports.getUsers = (req, res, next) => {
 };
 
 exports.getCurrentUser = (req, res, next) => {
-  User.findById(req.params._id)
+  User.findById(req.user._id)
     .then((user) => {
       if (!user) {
         throw new NotFoundError(' Пользователь не найден');
       }
-      res.send({ data: user });
+      res.send({
+        data: {
+          email: user.email,
+          name: user.name,
+        },
+      });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -32,20 +37,27 @@ exports.getCurrentUser = (req, res, next) => {
 };
 
 exports.updateUserInfo = (req, res, next) => {
-  const { name } = req.body;
-  User.findByIdAndUpdate(req.user._id, { name }, { new: true, runValidators: true })
+  const { name, email } = req.body;
+  User.findByIdAndUpdate(req.user._id, { name, email }, { new: true, runValidators: true })
     .then((user) => {
       if (!user) {
         throw new NotFoundError(' Пользователь не найден');
       }
-      res.send({ data: user });
+      res.send({
+        data: {
+          email: user.email,
+          name: user.name,
+        },
+      });
     })
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
         next(new BadRequestError('Переданы некорректные данные'));
-      } else {
-        next(err);
       }
+      if (err.code === 11000) {
+        next(new ConflictError('Указанный email уже существует на сервере'));
+      }
+      return next(err);
     });
 };
 
@@ -54,26 +66,22 @@ exports.createUser = (req, res, next) => {
     name, email, password,
   } = req.body;
 
-  User.findOne({ email })
-    .then((user) => {
-      if (user) {
-        throw new ConflictError('При регистрации указан email, который уже существует на сервере');
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({ name, email, password: hash }))
+    .then((userObj) => res.send({
+      data: {
+        name: userObj.name,
+        email: userObj.email,
+      },
+    }))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new BadRequestError('Переданы некорректные данные в методы создания пользователя'));
       }
-      bcrypt.hash(password, 10)
-        .then((hash) => User.create({ name, email, password: hash }))
-        .then((userObj) => res.send({
-          data: {
-            name: userObj.name,
-            email: userObj.email,
-          },
-        }))
-        .catch((err) => {
-          if (err.name === 'ValidationError') {
-            next(new BadRequestError('Переданы некорректные данные в методы создания пользователя'));
-          } else {
-            next(err);
-          }
-        });
+      if (err.code === 11000) {
+        next(new ConflictError('Указанный email уже существует на сервере'));
+      }
+      return next(err);
     })
     .catch(next);
 };
@@ -84,7 +92,7 @@ exports.login = (req, res, next) => {
   User.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
-        throw new UnauthorizedError('Пользователь по указанномое email не найден');
+        throw new NotFoundError('Неправильная почта или пароль');
       }
       return bcrypt.compare(password, user.password)
         .then((matched) => {
@@ -92,7 +100,7 @@ exports.login = (req, res, next) => {
             const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'some-secret-word', { expiresIn: '7d' });
             return res.send({ token });
           }
-          throw new UnauthorizedError('Передан неверный логин или пароль');
+          throw new UnauthorizedError('Неправильная почта или пароль');
         });
     })
     .catch(next);

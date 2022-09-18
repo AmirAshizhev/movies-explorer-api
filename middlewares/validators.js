@@ -1,10 +1,10 @@
 const { celebrate, Joi } = require('celebrate');
-
-const regular = /https?:\/\/(www\.)?([0-9A-Za-z-._~:/?#@!$&()*+,;=[\]]{2,265})\.[A-Za-z]{2,6}\b([A-Za-z-._~:/?#@!$&()*+,;=[\]]*)/;
+const validator = require('validator');
 
 const updateUserInfoValidator = celebrate({
   body: Joi.object().keys({
     name: Joi.string().min(2).max(30),
+    email: Joi.string().email(),
   }),
 });
 
@@ -15,18 +15,33 @@ const createMovieValidator = celebrate({
     duration: Joi.number().required(),
     year: Joi.string().required(),
     description: Joi.string().required().min(2).max(30),
-    image: Joi.string().required().pattern(new RegExp(regular)),
-    trailerLink: Joi.string().required().pattern(new RegExp(regular)),
+    image: Joi.string().required().custom((value, helpers) => {
+      if (validator.isURL(value)) {
+        return value;
+      }
+      return helpers.message('поле image заполнено некорректно');
+    }),
+    trailerLink: Joi.string().required().custom((value, helpers) => {
+      if (validator.isURL(value)) {
+        return value;
+      }
+      return helpers.message('поле trailerLink заполнено некорректно');
+    }),
     nameRU: Joi.string().required(),
     nameEN: Joi.string().required(),
-    thumbnail: Joi.string().required().pattern(new RegExp(regular)),
-    movieId: Joi.string().length(24).hex(),
+    thumbnail: Joi.string().required().custom((value, helpers) => {
+      if (validator.isURL(value)) {
+        return value;
+      }
+      return helpers.message('поле thumbnail заполнено некорректно');
+    }),
+    movieId: Joi.number().required(),
   }),
 });
 
 const deleteMovieValidator = celebrate({
   params: Joi.object().keys({
-    movieId: Joi.string().length(24).hex(),
+    _id: Joi.string().length(24).hex(),
   }),
 });
 
@@ -41,7 +56,7 @@ const createUserValidator = celebrate({
   body: Joi.object().keys({
     email: Joi.string().required().email(),
     password: Joi.string().required().min(3),
-    name: Joi.string().required(),
+    name: Joi.string().required().min(2).max(30),
   }),
 });
 

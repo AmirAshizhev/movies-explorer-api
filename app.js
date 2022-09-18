@@ -2,12 +2,12 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const { errors } = require('celebrate');
+require('dotenv').config();
 const errorHandler = require('./middlewares/errorHandler');
 const { errorLogger, requestLogger } = require('./middlewares/logger');
 const router = require('./routes');
-require('dotenv').config();
 
-const { PORT = 3002 } = process.env;
+const { PORT = 3002, MONGO_DATABASE = 'mongodb://localhost:27017/moviesdb' } = process.env;
 
 const app = express();
 const allowedCors = [
@@ -19,7 +19,6 @@ const allowedCors = [
 
 app.use(bodyParser.json());
 
-// eslint-disable-next-line consistent-return
 app.use((req, res, next) => {
   const { origin } = req.headers;
   if (allowedCors.includes(origin)) {
@@ -36,10 +35,11 @@ app.use((req, res, next) => {
 
     return res.end();
   }
-  next();
+
+  return next();
 });
 
-mongoose.connect('mongodb://localhost:27017/moviesdb', {
+mongoose.connect(MONGO_DATABASE, {
   useNewUrlParser: true,
 });
 

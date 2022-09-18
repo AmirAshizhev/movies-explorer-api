@@ -49,7 +49,7 @@ exports.createMovie = (req, res, next) => {
 };
 
 exports.deleteMovie = (req, res, next) => {
-  Movie.findById(req.params.movieId)
+  Movie.findById(req.params._id)
     .then((movie) => {
       if (!movie) {
         throw new NotFoundError('Карточка по указанному _id не найдена');
