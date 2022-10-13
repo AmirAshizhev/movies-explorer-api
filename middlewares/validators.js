@@ -14,7 +14,7 @@ const createMovieValidator = celebrate({
     director: Joi.string().required(),
     duration: Joi.number().required(),
     year: Joi.string().required(),
-    description: Joi.string().required().min(2).max(30),
+    description: Joi.string().required().min(2),
     image: Joi.string().required().custom((value, helpers) => {
       if (validator.isURL(value)) {
         return value;

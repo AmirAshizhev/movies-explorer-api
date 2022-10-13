@@ -11,6 +11,7 @@ const { PORT = 3002, MONGO_DATABASE = 'mongodb://localhost:27017/moviesdb' } = p
 
 const app = express();
 const allowedCors = [
+  'localhost:3000',
   'localhost:3002',
   'http://localhost:3002',
   'http://localhost:3003',
